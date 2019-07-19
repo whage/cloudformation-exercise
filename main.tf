@@ -1,28 +1,119 @@
 resource "aws_vpc" "vpc" {
     cidr_block = "10.0.0.0/16"
+
+    tags = {
+        Name = "flask-vpc"
+    }
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = "${aws_vpc.vpc.id}"
 }
 
-resource "aws_subnet" "subnet_a" {
+resource "aws_subnet" "pub_subnet_a" {
     vpc_id = "${aws_vpc.vpc.id}"
     cidr_block = "10.0.0.0/24"
     availability_zone = "eu-central-1a"
+
+    tags = {
+        Name = "flask-pub-subnet-a"
+    }
 }
 
-resource "aws_subnet" "subnet_b" {
+resource "aws_subnet" "pub_subnet_b" {
     vpc_id = "${aws_vpc.vpc.id}"
     cidr_block = "10.0.1.0/24"
     availability_zone = "eu-central-1b"
+
+    tags = {
+        Name = "flask-pub-subnet-b"
+    }
+}
+
+resource "aws_route_table" "pub_rt" {
+    vpc_id = "${aws_vpc.vpc.id}"
+
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = "${aws_internet_gateway.igw.id}"
+    }
+
+    tags = {
+        Name = "flask-pub-route-table"
+    }
+}
+
+resource "aws_route_table_association" "rta_pub_a" {
+    subnet_id = "${aws_subnet.pub_subnet_a.id}"
+    route_table_id = "${aws_route_table.pub_rt.id}"
+}
+
+resource "aws_route_table_association" "rta_pub_b" {
+    subnet_id = "${aws_subnet.pub_subnet_b.id}"
+    route_table_id = "${aws_route_table.pub_rt.id}"
+}
+
+resource "aws_eip" "nat" {
+    vpc = true
+    tags = {
+        Name = "flask-webapp-test-eip"
+    }
+}
+
+resource "aws_nat_gateway" "ngw" {
+    allocation_id = "${aws_eip.nat.id}"
+    subnet_id = "${aws_subnet.pub_subnet_a.id}"
+    depends_on = ["aws_internet_gateway.igw"]
+}
+
+resource "aws_subnet" "priv_subnet_a" {
+    vpc_id = "${aws_vpc.vpc.id}"
+    cidr_block = "10.0.2.0/24"
+    availability_zone = "eu-central-1a"
+
+    tags = {
+        Name = "flask-priv-subnet-a"
+    }
+}
+
+resource "aws_subnet" "priv_subnet_b" {
+    vpc_id = "${aws_vpc.vpc.id}"
+    cidr_block = "10.0.3.0/24"
+    availability_zone = "eu-central-1b"
+
+    tags = {
+        Name = "flask-priv-subnet-b"
+    }
+}
+
+resource "aws_route_table" "priv_rt" {
+    vpc_id = "${aws_vpc.vpc.id}"
+
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = "${aws_nat_gateway.ngw.id}"
+    }
+
+    tags = {
+        Name = "flask-priv-route-table"
+    }
+}
+
+resource "aws_route_table_association" "rta_priv_a" {
+    subnet_id = "${aws_subnet.priv_subnet_a.id}"
+    route_table_id = "${aws_route_table.priv_rt.id}"
+}
+
+resource "aws_route_table_association" "rta_priv_b" {
+    subnet_id = "${aws_subnet.priv_subnet_b.id}"
+    route_table_id = "${aws_route_table.priv_rt.id}"
 }
 
 resource "aws_db_subnet_group" "subnet_group" {
     name = "test-subnet-group"
     subnet_ids = [
-        "${aws_subnet.subnet_a.id}",
-        "${aws_subnet.subnet_b.id}",
+        "${aws_subnet.priv_subnet_a.id}",
+        "${aws_subnet.priv_subnet_b.id}",
     ]
 }
 
@@ -35,6 +126,28 @@ resource "aws_security_group" "db_sg" {
         to_port = 3306
         protocol = "tcp"
         cidr_blocks = ["10.0.0.0/16"]
+    }
+}
+
+resource "aws_security_group" "ecs_sg" {
+    name = "flask-ecs-sg"
+    vpc_id = "${aws_vpc.vpc.id}"
+    
+    ingress {
+        from_port = 32768
+        to_port = 60999
+        protocol = "tcp"
+        /*security_groups = [
+            "${aws_security_group.lb_sg.id}"
+        ]*/
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
     }
 }
 
@@ -51,17 +164,6 @@ resource "aws_db_instance" "instance" {
     skip_final_snapshot = true
     vpc_security_group_ids = ["${aws_security_group.db_sg.id}"]
     multi_az = true
-}
-
-resource "aws_autoscaling_group" "asg" {
-    name = "flask_webapp_asg"
-    min_size = 1
-    max_size = 2
-    launch_configuration = "${aws_launch_configuration.lc.name}"
-    vpc_zone_identifier = [
-        "${aws_subnet.subnet_a.id}",
-        "${aws_subnet.subnet_b.id}",
-    ]
 }
 
 resource "aws_iam_role" "ecs_service_role" {
@@ -97,6 +199,11 @@ resource "aws_iam_role_policy_attachment" "ecs_instance_role_policy_attachment" 
     policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
 
+resource "aws_iam_role_policy_attachment" "ecs_ssm_instance_role_policy_attachment" {
+    role = "${aws_iam_role.ecs_instance_role.name}"
+    policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 data "aws_iam_policy_document" "ecs_instance_policy" {
     statement {
         actions = ["sts:AssumeRole"]
@@ -113,15 +220,37 @@ resource "aws_iam_instance_profile" "flask_instance_profile" {
     role = "${aws_iam_role.ecs_instance_role.name}"
 }
 
+resource "aws_autoscaling_group" "asg" {
+    name = "flask_webapp_asg"
+    min_size = 1
+    max_size = 2
+    launch_configuration = "${aws_launch_configuration.lc.name}"
+    vpc_zone_identifier = [
+        "${aws_subnet.priv_subnet_a.id}",
+        "${aws_subnet.priv_subnet_b.id}",
+    ]
+
+    tag {
+        key = "Name"
+        value = "sallai_flask_webapp_asg"
+        propagate_at_launch = true
+    }
+}
+
 resource "aws_launch_configuration" "lc" {
     name = "flask_webapp_lc"
-    image_id = "ami-0c0c01a7a42f41c0c"
-    instance_type = "t2.micro"
+    image_id = "ami-0650e7d86452db33b" # amzn2-ami-ecs-hvm-2.0.20190709-x86_64-ebs
+    instance_type = "t2.medium"
     key_name = "sallai-key"
     iam_instance_profile = "${aws_iam_instance_profile.flask_instance_profile.id}"
+    security_groups = [
+        "${aws_security_group.ecs_sg.id}"
+    ]
     user_data = <<EOF
         #!/bin/bash
-        echo ECS_CLUSTER=flask_webapp_cluster >> /etc/ecs/ecs.config
+        mkdir /etc/ecs
+        echo ECS_CLUSTER=${aws_ecs_cluster.cluster.name} >> /etc/ecs/ecs.config
+        sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
 EOF
 }
 
@@ -172,7 +301,7 @@ resource "aws_ecs_task_definition" "flask_webapp" {
             "portMappings": [
                 {
                     "containerPort": 5000,
-                    "hostPort": 80
+                    "hostPort": 0
                 }
             ]
         }
@@ -188,8 +317,8 @@ resource "aws_lb" "flask_webapp_load_balancer" {
         "${aws_security_group.lb_sg.id}"
     ]
     subnets = [
-        "${aws_subnet.subnet_a.id}",
-        "${aws_subnet.subnet_b.id}",
+        "${aws_subnet.pub_subnet_a.id}",
+        "${aws_subnet.pub_subnet_b.id}",
     ]
     depends_on = [
         "aws_internet_gateway.igw"
