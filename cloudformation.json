@@ -1,0 +1,149 @@
+{
+    "Parameters" : {
+
+    },
+    "Resources" : {
+        "vpc" : {
+            "Type" : "AWS::EC2::VPC",
+            "Properties" : {
+                "CidrBlock" : "10.0.0.0/16",
+                "Tags" : [
+                    {"Key" : "Name", "Value" : "flask-vpc"}
+                ]
+            }
+        },
+        "igw" : {
+            "Type" : "AWS::EC2::InternetGateway",
+        },
+        "pub_subnet_a" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "CidrBlock" : "10.0.0.0/24",
+                "AvailabilityZone" : "eu-central-1a",
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-pub-subnet-a"}
+                ]
+            }
+        },
+        "pub_subnet_b" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "CidrBlock" : "10.0.1.0/24",
+                "AvailabilityZone" : "eu-central-1b",
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-pub-subnet-b"}
+                ]
+            }
+        },
+        "pub_rt" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-pub-route-table"}
+                ]
+            }
+        },
+        "pub_rt_default_route" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "GatewayToInternet",
+            "Properties" : {
+                "RouteTableId" : {"Ref" : "pub_rt"},
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId" : {"Ref" : "igw"}
+            }
+        },
+        "rta_pub_a" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId": {"Ref" : "pub_rt"},
+                "SubnetId" : {"Ref" : "pub_subnet_a"}
+            }
+        },
+        "rta_pub_b" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId": {"Ref" : "pub_rt"},
+                "SubnetId" : {"Ref" : "pub_subnet_b"}
+            }
+        },
+        "eip" : {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-webapp-test-eip"}
+                ]
+            }
+        },
+        "ngw" : {
+            "Type" : "AWS::EC2::NatGateway",
+            "AllocationId" : { "Fn::GetAtt" : ["eip", "AllocationId"]},
+            "SubnetId" : { "Ref" : "pub_subnet_a"},
+        },
+        "priv_subnet_a" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "CidrBlock" : "10.0.2.0/24",
+                "AvailabilityZone" : "eu-central-1a",
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-priv-subnet-a"}
+                ]
+            }
+        },
+        "priv_subnet_b" : {
+            "Type" : "AWS::EC2::Subnet",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "CidrBlock" : "10.0.3.0/24",
+                "AvailabilityZone" : "eu-central-1b",
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-priv-subnet-b"}
+                ]
+            }
+        },
+        "priv_rt" : {
+            "Type" : "AWS::EC2::RouteTable",
+            "Properties" : {
+                "VpcId" : {"Ref" : "vpc"},
+                "Tags"  [
+                    {"Key" : "Name", "Value" : "flask-priv-route-table"}
+                ]
+            }
+        },
+        "priv_rt_default_route" : {
+            "Type" : "AWS::EC2::Route",
+            "DependsOn" : "GatewayToInternet",
+            "Properties" : {
+                "RouteTableId" : {"Ref" : "pub_rt"},
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId" : {"Ref" : "ngw"}
+            }
+        },
+        "rta_priv_a" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId": {"Ref" : "priv_rt"},
+                "SubnetId" : {"Ref" : "priv_subnet_a"}
+            }
+        },
+        "rta_priv_b" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "RouteTableId": {"Ref" : "priv_rt"},
+                "SubnetId" : {"Ref" : "priv_subnet_b"}
+            }
+        },
+        "subnet_group" : {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+                "SubnetIds": [
+
+                ],
+                "DBSubnetGroupName": "test-subnet-group",
+            }
+        },
+    }
+}
