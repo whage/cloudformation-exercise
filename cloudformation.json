@@ -13,7 +13,7 @@
             }
         },
         "igw" : {
-            "Type" : "AWS::EC2::InternetGateway",
+            "Type" : "AWS::EC2::InternetGateway"
         },
         "pub_subnet_a" : {
             "Type" : "AWS::EC2::Subnet",
@@ -21,7 +21,7 @@
                 "VpcId" : {"Ref" : "vpc"},
                 "CidrBlock" : "10.0.0.0/24",
                 "AvailabilityZone" : "eu-central-1a",
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-pub-subnet-a"}
                 ]
             }
@@ -32,7 +32,7 @@
                 "VpcId" : {"Ref" : "vpc"},
                 "CidrBlock" : "10.0.1.0/24",
                 "AvailabilityZone" : "eu-central-1b",
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-pub-subnet-b"}
                 ]
             }
@@ -41,7 +41,7 @@
             "Type" : "AWS::EC2::RouteTable",
             "Properties" : {
                 "VpcId" : {"Ref" : "vpc"},
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-pub-route-table"}
                 ]
             }
@@ -72,7 +72,7 @@
         "eip" : {
             "Type" : "AWS::EC2::EIP",
             "Properties" : {
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-webapp-test-eip"}
                 ]
             }
@@ -80,7 +80,7 @@
         "ngw" : {
             "Type" : "AWS::EC2::NatGateway",
             "AllocationId" : { "Fn::GetAtt" : ["eip", "AllocationId"]},
-            "SubnetId" : { "Ref" : "pub_subnet_a"},
+            "SubnetId" : { "Ref" : "pub_subnet_a"}
         },
         "priv_subnet_a" : {
             "Type" : "AWS::EC2::Subnet",
@@ -88,7 +88,7 @@
                 "VpcId" : {"Ref" : "vpc"},
                 "CidrBlock" : "10.0.2.0/24",
                 "AvailabilityZone" : "eu-central-1a",
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-priv-subnet-a"}
                 ]
             }
@@ -99,7 +99,7 @@
                 "VpcId" : {"Ref" : "vpc"},
                 "CidrBlock" : "10.0.3.0/24",
                 "AvailabilityZone" : "eu-central-1b",
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-priv-subnet-b"}
                 ]
             }
@@ -108,7 +108,7 @@
             "Type" : "AWS::EC2::RouteTable",
             "Properties" : {
                 "VpcId" : {"Ref" : "vpc"},
-                "Tags"  [
+                "Tags" : [
                     {"Key" : "Name", "Value" : "flask-priv-route-table"}
                 ]
             }
@@ -142,8 +142,8 @@
                 "SubnetIds": [
 
                 ],
-                "DBSubnetGroupName": "test-subnet-group",
+                "DBSubnetGroupName": "test-subnet-group"
             }
-        },
+        }
     }
 }
