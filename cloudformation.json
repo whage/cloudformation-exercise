@@ -140,10 +140,59 @@
             "Type": "AWS::RDS::DBSubnetGroup",
             "Properties" : {
                 "SubnetIds": [
-
+                    { "Ref" : "priv_subnet_a" },
+                    { "Ref" : "priv_subnet_b" }
                 ],
                 "DBSubnetGroupName": "test-subnet-group"
             }
+        },
+        "db_sg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "VpcId" : {"Ref" : "vpc"},
+            "SecurityGroupIngress" : [{
+                "IpProtocol" : "tcp",
+                "FromPort" : 0,
+                "ToPort" : 3306,
+                "CidrIp" : "10.0.0.0/16"
+            }]
+        },
+        "ecs_sg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "VpcId" : {"Ref" : "vpc"},
+            "SecurityGroupIngress" : [{
+                "IpProtocol" : "tcp",
+                "FromPort" : 32768,
+                "ToPort" : 60999,
+                "CidrIp" : "0.0.0.0/0"
+            }],
+            "SecurityGroupEgress" : [{
+                "IpProtocol" : "-1",
+                "FromPort" : 0,
+                "ToPort" : 0,
+                "CidrIp" : "0.0.0.0/0"
+            }]
+        },
+        "instance" : {
+            "Type" : "AWS::RDS::DBInstance",
+            "AllocatedStorage" : 5,
+            "StorageType" : "gp2",
+            "Engine" : "mysql",
+            "InstanceClass" : "db.t2.micro",
+            "DBName" : "test-instance",
+            "Name" : "testdb",
+            "MasterUsername" : "",
+            "MasterUserPassword" : "",
+            "DBSubnetGroupName": { "Ref" : "subnet_group" },
+            "VPCSecurityGroups": [
+                { "Ref" : "db_sg" }
+            ],
+            "MultiAZ": true
+        },
+        "ecs_service_role" : {
+            "Type" : "AWS::IAM::Role",
+            "RoleName" : "flask_ecs_service_role",
+            "Path" : "/",
+            "AssumeRolePolicyDocument" : { "Ref" : "ecs_service_policy" }
         }
     }
 }
