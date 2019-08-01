@@ -172,7 +172,7 @@
                 "CidrIp" : "0.0.0.0/0"
             }]
         },
-        "instance" : {
+        "db_instance" : {
             "Type" : "AWS::RDS::DBInstance",
             "AllocatedStorage" : 5,
             "StorageType" : "gp2",
@@ -190,9 +190,205 @@
         },
         "ecs_service_role" : {
             "Type" : "AWS::IAM::Role",
-            "RoleName" : "flask_ecs_service_role",
+            "RoleName" : "flask-ecs-service-role",
             "Path" : "/",
-            "AssumeRolePolicyDocument" : { "Ref" : "ecs_service_policy" }
+            "ManagedPolicyArns" : [
+                { "Ref" : "ecs_service_policy" }
+            ]
+        },
+        "ecs_service_policy" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "flask-ecs-service-policy",
+                "PolicyDocument" : {
+                    "Statement" : [
+                        { "Effect" : "Allow", "Action" : "sts:AssumeRole" }
+                    ]
+                }
+            }
+        },
+        "ecs_instance_role" : {
+            "Type" : "AWS::IAM::Role",
+            "RoleName" : "flask-ecs-instance-role",
+            "Path" : "/",
+            "ManagedPolicyArns" : [
+                { "Ref" : "ecs_instance_policy" },
+                "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role",
+                "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+            ]
+        },
+        "ecs_instance_policy" : {
+            "Type" : "AWS::IAM::Policy",
+            "Properties" : {
+                "PolicyName" : "flask-ecs-service-policy",
+                "PolicyDocument" : {
+                    "Statement" : [
+                        { "Effect" : "Allow", "Action" : "sts:AssumeRole" }
+                    ]
+                }
+            }
+        },
+        "flask_instance_profile" : {
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "InstanceProfileName" : "flask-instance-profile",
+                "Roles" : [
+                    { "Ref" : "ecs_instance_role" }
+                ]
+            }
+        },
+        "asg" : {
+            "Type" : "AWS::AutoScaling::AutoScalingGroup",
+            "Properties" : {
+                "AutoScalingGroupName" : "flask-webapp-asg",
+                "MinSize" : 1,
+                "MaxSize" : 2,
+                "LaunchConfigurationName" : { "Ref" : "lc" },
+                "VPCZoneIdentifier" : [
+                    { "Ref" : "priv_subnet_a" },
+                    { "Ref" : "priv_subnet_b" }
+                ],
+                "Tags" : [
+                    { "Key" : "Name", "Value" : "flask-webapp-asg", "PropagateAtLaunch" : true }
+                ]
+            }
+        },
+        "lc" : {
+            "Type" : "AWS::AutoScaling::LaunchConfiguration",
+            "Properties" : {
+                "LaunchConfigurationName" : "flask-webapp-lc",
+                "ImageId" : "ami-0650e7d86452db33b",
+                "InstanceType" : "t2.medium",
+                "KeyName" : "sallai-key",
+                "IamInstanceProfile" : { "Ref" : "flask_instance_profile" },
+                "SecurityGroups" : [
+                    { "Ref" : "ecs_sg" }
+                ],
+                "UserData" : {
+                    "Fn::Base64" : {
+                        "Fn::Join" : [
+                            "\n",
+                            [
+                                "#!/bin/bash",
+                                "mkdir /etc/ecs",
+                                {
+                                    "Fn::Sub": [
+                                        "echo ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config",
+                                        { "ClusterName": { "Ref" : "cluster" } }
+                                    ]
+                                },
+                                "sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "bucket" : {
+            "Type" : "AWS::S3::Bucket",
+            "Properties" : {
+                "BucketName" : "flask-demo-bucket"
+            }
+        },
+        "ecr_repo" : {
+            "Type" : "AWS::ECR::Repository",
+            "Properties" : {
+                "RepositoryName" : "flask-webapp-test-repo"
+            }
+        },
+        "cluster" : {
+            "Type" : "AWS::ECS::Cluster",
+            "Properties" : {
+                "ClusterName" : "flask-webapp-cluster"
+            }
+        },
+        "service" : {
+            "Type" : "AWS::ECS::Service",
+            "Properties" : {
+                "ServiceName" : "flask-webapp-service",
+                "Cluster" : { "Ref" : "cluster" },
+                "TaskDefinition" : { "Ref" : "flask_webapp_task_def" },
+                "DesiredCount" : 3,
+                "Role" : { "Ref" : "ecs_service_role" },
+                "LoadBalancer" : [
+                    {
+                        "TargetGroupArn" : { "Ref" : "lb_tg" },
+                        "ContainerPort" : 5000,
+                        "ContainerName" : "flask-webapp"
+                    }
+                ]
+            }
+        },
+        "flask_webapp_task_def" : {
+            "Type" : "AWS::ECS::TaskDefinition",
+            "Properties" : {
+                "Family" : "flask-webapp",
+                "ContainerDefinitions" : [
+                    {
+                        "Name" : "flask-webapp",
+                        "Image" : "464255417364.dkr.ecr.eu-central-1.amazonaws.com/sallai-test:0.0.1",
+                        "Memory" : 512,
+                        "Cpu" : 1,
+                        "Essential" : true,
+                        "PortMappings" : [
+                            {
+                                "ContainerPort" : 5000,
+                                "HostPort" : 0
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "flask_webapp_load_balancer" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties" : {
+                "Name" : "flask-webapp-load-balancer",
+                "Scheme" : "internet-facing",
+                "Type" : "application",
+                "SecurityGroups" : [
+                    { "Ref" : "lb_sg" }
+                ],
+                "Subnets" : [
+                    { "Ref" : "priv_subnet_a" },
+                    { "Ref" : "priv_subnet_b" }
+                ]
+            },
+            "DependsOn" : "igw"
+        },
+        "lb_sg" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "VpcId" : {"Ref" : "vpc"},
+            "SecurityGroupIngress" : [{
+                "IpProtocol" : "tcp",
+                "FromPort" : 0,
+                "ToPort" : 80,
+                "CidrIp" : "00.0.0.0/0"
+            }]
+        },
+        "lb_tg" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties" : {
+                "Name" : "flask-webapp-tg",
+                "Port" : 80,
+                "Protocol" : "HTTP",
+                "VpcId" : { "Ref" : "vpc" }
+            },
+            "DependsOn" : "flask_webapp_load_balancer"
+        },
+        "listener" : {
+            "Type" : "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties" : {
+                "LoadBalancerArn" : { "Ref" : "flask_webapp_load_balancer" },
+                "Port" : 80,
+                "Protocol" : "HTTP",
+                "DefaultActions" : [
+                    {
+                        "TargetGroupArn" : { "Ref" : "lb_tg" },
+                        "Type" : "forward"
+                    }
+                ]
+            }
         }
     }
 }

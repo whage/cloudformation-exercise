@@ -151,7 +151,7 @@ resource "aws_security_group" "ecs_sg" {
     }
 }
 
-resource "aws_db_instance" "instance" {
+resource "aws_db_instance" "db_instance" {
     allocated_storage = 5
     storage_type = "gp2"
     engine = "mysql"
@@ -167,7 +167,7 @@ resource "aws_db_instance" "instance" {
 }
 
 resource "aws_iam_role" "ecs_service_role" {
-    name = "flask_ecs_service_role"
+    name = "flask-ecs-service-role"
     path = "/"
     assume_role_policy = "${data.aws_iam_policy_document.ecs_service_policy.json}"
 }
@@ -216,12 +216,12 @@ data "aws_iam_policy_document" "ecs_instance_policy" {
 }
 
 resource "aws_iam_instance_profile" "flask_instance_profile" {
-    name = "flask_instance_profile"
+    name = "flask-instance-profile"
     role = "${aws_iam_role.ecs_instance_role.name}"
 }
 
 resource "aws_autoscaling_group" "asg" {
-    name = "flask_webapp_asg"
+    name = "flask-webapp-asg"
     min_size = 1
     max_size = 2
     launch_configuration = "${aws_launch_configuration.lc.name}"
@@ -232,13 +232,13 @@ resource "aws_autoscaling_group" "asg" {
 
     tag {
         key = "Name"
-        value = "sallai_flask_webapp_asg"
+        value = "flask-webapp-asg"
         propagate_at_launch = true
     }
 }
 
 resource "aws_launch_configuration" "lc" {
-    name = "flask_webapp_lc"
+    name = "flask-webapp-lc"
     image_id = "ami-0650e7d86452db33b" # amzn2-ami-ecs-hvm-2.0.20190709-x86_64-ebs
     instance_type = "t2.medium"
     key_name = "sallai-key"
@@ -255,11 +255,11 @@ EOF
 }
 
 resource "aws_s3_bucket" "bucket" {
-    bucket = "sallai-demo-bucket"
+    bucket = "flask-demo-bucket"
 }
 
 resource "aws_ecr_repository" "ecr_repo" {
-    name = "sallai-test"
+    name = "flask-webapp-test-repo"
 }
 
 output "ecr_url" {
@@ -267,13 +267,13 @@ output "ecr_url" {
 }
 
 resource "aws_ecs_cluster" "cluster" {
-    name = "flask_webapp_cluster"
+    name = "flask-webapp-cluster"
 }
 
 resource "aws_ecs_service" "service" {
-    name = "flask_webapp_service"
+    name = "flask-webapp-service"
     cluster = "${aws_ecs_cluster.cluster.id}"
-    task_definition = "${aws_ecs_task_definition.flask_webapp.arn}"
+    task_definition = "${aws_ecs_task_definition.flask_webapp_task_def.arn}"
     desired_count = 3
     iam_role = "${aws_iam_role.ecs_service_role.name}"
 
@@ -283,17 +283,17 @@ resource "aws_ecs_service" "service" {
 
     load_balancer {
         target_group_arn = "${aws_lb_target_group.lb_tg.arn}"
-        container_name = "flask_webapp"
+        container_name = "flask-webapp"
         container_port = 5000
     }
 }
 
-resource "aws_ecs_task_definition" "flask_webapp" {
-    family = "flask_webapp"
+resource "aws_ecs_task_definition" "flask_webapp_task_def" {
+    family = "flask-webapp"
     container_definitions = <<EOF
     [
         {
-            "name": "flask_webapp",
+            "name": "flask-webapp",
             "image": "464255417364.dkr.ecr.eu-central-1.amazonaws.com/sallai-test:0.0.1",
             "memory": 512,
             "cpu": 1,
