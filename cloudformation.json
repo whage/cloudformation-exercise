@@ -103,11 +103,6 @@
         },
         "Eip" : {
             "Type" : "AWS::EC2::EIP",
-            "Properties" : {
-                "Tags" : [
-                    {"Key" : "Name", "Value" : "flask-webapp-test-eip"}
-                ]
-            }
         },
         "NGW" : {
             "Type" : "AWS::EC2::NatGateway",
@@ -183,6 +178,7 @@
         "DBSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
             "Properties" : {
+                "GroupDescription" : "db sg",
                 "VpcId" : {"Ref" : "Vpc"},
                 "SecurityGroupIngress" : [{
                     "IpProtocol" : "tcp",
@@ -195,6 +191,7 @@
         "ECSSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
             "Properties" : {
+                "GroupDescription" : "ecs sg",
                 "VpcId" : {"Ref" : "Vpc"},
                 "SecurityGroupIngress" : [{
                     "IpProtocol" : "tcp",
@@ -231,45 +228,41 @@
         "ECSServiceRole" : {
             "Type" : "AWS::IAM::Role",
             "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : "sts:AssumeRole",
+                            "Principal" : {
+                                "Service" : ["ecs.amazonaws.com", "ec2.amazonaws.com", "application-autoscaling.amazonaws.com", "ecs-tasks.amazonaws.com"]
+                            }
+                        }
+                    ]
+                },
                 "RoleName" : "flask-ecs-service-role",
                 "Path" : "/",
-                "ManagedPolicyArns" : [
-                    { "Ref" : "ECSServicePolicy" }
-                ]
-            }
-        },
-        "ECSServicePolicy" : {
-            "Type" : "AWS::IAM::Policy",
-            "Properties" : {
-                "PolicyName" : "flask-ecs-service-policy",
-                "PolicyDocument" : {
-                    "Statement" : [
-                        { "Effect" : "Allow", "Action" : "sts:AssumeRole" }
-                    ]
-                }
             }
         },
         "ECSInstanceRole" : {
             "Type" : "AWS::IAM::Role",
             "Properties" : {
+                "AssumeRolePolicyDocument" : {
+                    "Statement" : [
+                        {
+                            "Effect" : "Allow",
+                            "Action" : "sts:AssumeRole",
+                            "Principal" : {
+                                "Service" : ["ecs.amazonaws.com", "ec2.amazonaws.com", "application-autoscaling.amazonaws.com", "ecs-tasks.amazonaws.com"]
+                            }
+                        }
+                    ]
+                },
                 "RoleName" : "flask-ecs-instance-role",
                 "Path" : "/",
                 "ManagedPolicyArns" : [
-                    { "Ref" : "ECSInstanceProfile" },
                     "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role",
                     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
                 ]
-            }
-        },
-        "ECSInstanceProfile" : {
-            "Type" : "AWS::IAM::Policy",
-            "Properties" : {
-                "PolicyName" : "flask-ecs-service-policy",
-                "PolicyDocument" : {
-                    "Statement" : [
-                        { "Effect" : "Allow", "Action" : "sts:AssumeRole" }
-                    ]
-                }
             }
         },
         "FlaskInstanceProfile" : {
@@ -403,6 +396,7 @@
         "LBSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
             "Properties" : {
+                "GroupDescription" : "lb sg",
                 "VpcId" : {"Ref" : "Vpc"},
                 "SecurityGroupIngress" : [{
                     "IpProtocol" : "tcp",
