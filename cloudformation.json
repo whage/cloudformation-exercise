@@ -47,6 +47,13 @@
         "Igw" : {
             "Type" : "AWS::EC2::InternetGateway"
         },
+        "IgwAttachment" : {
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties" : {
+                "InternetGatewayId" : { "Ref" : "Igw" },
+                "VpcId" : { "Ref" : "Vpc" },
+            }
+        },
         "PubSubnetA" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
@@ -168,6 +175,7 @@
         "SubnetGroup" : {
             "Type": "AWS::RDS::DBSubnetGroup",
             "Properties" : {
+                "DBSubnetGroupDescription" : "db subnet group",
                 "SubnetIds": [
                     { "Ref" : "PrivSubnetA" },
                     { "Ref" : "PrivSubnetB" }
@@ -213,7 +221,7 @@
                 "AllocatedStorage" : 5,
                 "StorageType" : "gp2",
                 "Engine" : "mysql",
-                "InstanceClass" : { "Ref" : "DBInstanceClass" },
+                "DBInstanceClass" : { "Ref" : "DBInstanceClass" },
                 "DBName" : "test-instance",
                 "Name" : "testdb",
                 "MasterUsername" : { "Ref" : "MasterUsername" },
@@ -402,7 +410,7 @@
                     "IpProtocol" : "tcp",
                     "FromPort" : 0,
                     "ToPort" : 80,
-                    "CidrIp" : "00.0.0.0/0"
+                    "CidrIp" : "0.0.0.0/0"
                 }]
             }
         },
