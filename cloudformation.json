@@ -3,7 +3,7 @@
 
     },
     "Resources" : {
-        "vpc" : {
+        "Vpc" : {
             "Type" : "AWS::EC2::VPC",
             "Properties" : {
                 "CidrBlock" : "10.0.0.0/16",
@@ -12,13 +12,13 @@
                 ]
             }
         },
-        "igw" : {
+        "Igw" : {
             "Type" : "AWS::EC2::InternetGateway"
         },
-        "pub_subnet_a" : {
+        "PubSubnetA" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "CidrBlock" : "10.0.0.0/24",
                 "AvailabilityZone" : "eu-central-1a",
                 "Tags" : [
@@ -26,10 +26,10 @@
                 ]
             }
         },
-        "pub_subnet_b" : {
+        "PubSubnetB" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "CidrBlock" : "10.0.1.0/24",
                 "AvailabilityZone" : "eu-central-1b",
                 "Tags" : [
@@ -37,39 +37,39 @@
                 ]
             }
         },
-        "pub_rt" : {
+        "PubRT" : {
             "Type" : "AWS::EC2::RouteTable",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "Tags" : [
                     {"Key" : "Name", "Value" : "flask-pub-route-table"}
                 ]
             }
         },
-        "pub_rt_default_route" : {
+        "PubRTDefaultRoute" : {
             "Type" : "AWS::EC2::Route",
-            "DependsOn" : "GatewayToInternet",
+            "DependsOn" : "Igw",
             "Properties" : {
-                "RouteTableId" : {"Ref" : "pub_rt"},
+                "RouteTableId" : {"Ref" : "PubRT"},
                 "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId" : {"Ref" : "igw"}
+                "GatewayId" : {"Ref" : "Igw"}
             }
         },
-        "rta_pub_a" : {
+        "RTAPubA" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
-                "RouteTableId": {"Ref" : "pub_rt"},
-                "SubnetId" : {"Ref" : "pub_subnet_a"}
+                "RouteTableId": {"Ref" : "PubRT"},
+                "SubnetId" : {"Ref" : "PubSubnetA"}
             }
         },
-        "rta_pub_b" : {
+        "RTAPubB" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
-                "RouteTableId": {"Ref" : "pub_rt"},
-                "SubnetId" : {"Ref" : "pub_subnet_b"}
+                "RouteTableId": {"Ref" : "PubRT"},
+                "SubnetId" : {"Ref" : "PubSubnetB"}
             }
         },
-        "eip" : {
+        "Eip" : {
             "Type" : "AWS::EC2::EIP",
             "Properties" : {
                 "Tags" : [
@@ -77,15 +77,17 @@
                 ]
             }
         },
-        "ngw" : {
+        "NGW" : {
             "Type" : "AWS::EC2::NatGateway",
-            "AllocationId" : { "Fn::GetAtt" : ["eip", "AllocationId"]},
-            "SubnetId" : { "Ref" : "pub_subnet_a"}
+            "Properties" : {
+                "AllocationId" : { "Fn::GetAtt" : ["Eip", "AllocationId"]},
+                "SubnetId" : { "Ref" : "PubSubnetA"}
+            }
         },
-        "priv_subnet_a" : {
+        "PrivSubnetA" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "CidrBlock" : "10.0.2.0/24",
                 "AvailabilityZone" : "eu-central-1a",
                 "Tags" : [
@@ -93,10 +95,10 @@
                 ]
             }
         },
-        "priv_subnet_b" : {
+        "PrivSubnetB" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "CidrBlock" : "10.0.3.0/24",
                 "AvailabilityZone" : "eu-central-1b",
                 "Tags" : [
@@ -104,99 +106,107 @@
                 ]
             }
         },
-        "priv_rt" : {
+        "PrivRT" : {
             "Type" : "AWS::EC2::RouteTable",
             "Properties" : {
-                "VpcId" : {"Ref" : "vpc"},
+                "VpcId" : {"Ref" : "Vpc"},
                 "Tags" : [
                     {"Key" : "Name", "Value" : "flask-priv-route-table"}
                 ]
             }
         },
-        "priv_rt_default_route" : {
+        "PrivRTDefaultRoute" : {
             "Type" : "AWS::EC2::Route",
-            "DependsOn" : "GatewayToInternet",
+            "DependsOn" : "Igw",
             "Properties" : {
-                "RouteTableId" : {"Ref" : "pub_rt"},
+                "RouteTableId" : {"Ref" : "PubRT"},
                 "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId" : {"Ref" : "ngw"}
+                "GatewayId" : {"Ref" : "NGW"}
             }
         },
-        "rta_priv_a" : {
+        "RTAPrivA" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
-                "RouteTableId": {"Ref" : "priv_rt"},
-                "SubnetId" : {"Ref" : "priv_subnet_a"}
+                "RouteTableId": {"Ref" : "PrivRT"},
+                "SubnetId" : {"Ref" : "PrivSubnetA"}
             }
         },
-        "rta_priv_b" : {
+        "RTAPrivB" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
-                "RouteTableId": {"Ref" : "priv_rt"},
-                "SubnetId" : {"Ref" : "priv_subnet_b"}
+                "RouteTableId": {"Ref" : "PrivRT"},
+                "SubnetId" : {"Ref" : "PrivSubnetB"}
             }
         },
-        "subnet_group" : {
+        "SubnetGroup" : {
             "Type": "AWS::RDS::DBSubnetGroup",
             "Properties" : {
                 "SubnetIds": [
-                    { "Ref" : "priv_subnet_a" },
-                    { "Ref" : "priv_subnet_b" }
+                    { "Ref" : "PrivSubnetA" },
+                    { "Ref" : "PrivSubnetB" }
                 ],
                 "DBSubnetGroupName": "test-subnet-group"
             }
         },
-        "db_sg" : {
+        "DBSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
-            "VpcId" : {"Ref" : "vpc"},
-            "SecurityGroupIngress" : [{
-                "IpProtocol" : "tcp",
-                "FromPort" : 0,
-                "ToPort" : 3306,
-                "CidrIp" : "10.0.0.0/16"
-            }]
+            "Properties" : {
+                "VpcId" : {"Ref" : "Vpc"},
+                "SecurityGroupIngress" : [{
+                    "IpProtocol" : "tcp",
+                    "FromPort" : 0,
+                    "ToPort" : 3306,
+                    "CidrIp" : "10.0.0.0/16"
+                }]
+            }
         },
-        "ecs_sg" : {
+        "ECSSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
-            "VpcId" : {"Ref" : "vpc"},
-            "SecurityGroupIngress" : [{
-                "IpProtocol" : "tcp",
-                "FromPort" : 32768,
-                "ToPort" : 60999,
-                "CidrIp" : "0.0.0.0/0"
-            }],
-            "SecurityGroupEgress" : [{
-                "IpProtocol" : "-1",
-                "FromPort" : 0,
-                "ToPort" : 0,
-                "CidrIp" : "0.0.0.0/0"
-            }]
+            "Properties" : {
+                "VpcId" : {"Ref" : "Vpc"},
+                "SecurityGroupIngress" : [{
+                    "IpProtocol" : "tcp",
+                    "FromPort" : 32768,
+                    "ToPort" : 60999,
+                    "CidrIp" : "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress" : [{
+                    "IpProtocol" : "-1",
+                    "FromPort" : 0,
+                    "ToPort" : 0,
+                    "CidrIp" : "0.0.0.0/0"
+                }]
+            }
         },
-        "db_instance" : {
+        "DBInstance" : {
             "Type" : "AWS::RDS::DBInstance",
-            "AllocatedStorage" : 5,
-            "StorageType" : "gp2",
-            "Engine" : "mysql",
-            "InstanceClass" : "db.t2.micro",
-            "DBName" : "test-instance",
-            "Name" : "testdb",
-            "MasterUsername" : "",
-            "MasterUserPassword" : "",
-            "DBSubnetGroupName": { "Ref" : "subnet_group" },
-            "VPCSecurityGroups": [
-                { "Ref" : "db_sg" }
-            ],
-            "MultiAZ": true
+            "Properties" : {
+                "AllocatedStorage" : 5,
+                "StorageType" : "gp2",
+                "Engine" : "mysql",
+                "InstanceClass" : "db.t2.micro",
+                "DBName" : "test-instance",
+                "Name" : "testdb",
+                "MasterUsername" : "",
+                "MasterUserPassword" : "",
+                "DBSubnetGroupName": { "Ref" : "SubnetGroup" },
+                "VPCSecurityGroups": [
+                    { "Ref" : "DBSG" }
+                ],
+                "MultiAZ": true
+            }
         },
-        "ecs_service_role" : {
+        "ECSServiceRole" : {
             "Type" : "AWS::IAM::Role",
-            "RoleName" : "flask-ecs-service-role",
-            "Path" : "/",
-            "ManagedPolicyArns" : [
-                { "Ref" : "ecs_service_policy" }
-            ]
+            "Properties" : {
+                "RoleName" : "flask-ecs-service-role",
+                "Path" : "/",
+                "ManagedPolicyArns" : [
+                    { "Ref" : "ECSServicePolicy" }
+                ]
+            }
         },
-        "ecs_service_policy" : {
+        "ECSServicePolicy" : {
             "Type" : "AWS::IAM::Policy",
             "Properties" : {
                 "PolicyName" : "flask-ecs-service-policy",
@@ -207,17 +217,19 @@
                 }
             }
         },
-        "ecs_instance_role" : {
+        "ECSInstanceRole" : {
             "Type" : "AWS::IAM::Role",
-            "RoleName" : "flask-ecs-instance-role",
-            "Path" : "/",
-            "ManagedPolicyArns" : [
-                { "Ref" : "ecs_instance_policy" },
-                "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role",
-                "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-            ]
+            "Properties" : {
+                "RoleName" : "flask-ecs-instance-role",
+                "Path" : "/",
+                "ManagedPolicyArns" : [
+                    { "Ref" : "ECSInstanceProfile" },
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role",
+                    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+                ]
+            }
         },
-        "ecs_instance_policy" : {
+        "ECSInstanceProfile" : {
             "Type" : "AWS::IAM::Policy",
             "Properties" : {
                 "PolicyName" : "flask-ecs-service-policy",
@@ -228,41 +240,41 @@
                 }
             }
         },
-        "flask_instance_profile" : {
+        "FlaskInstanceProfile" : {
             "Type" : "AWS::IAM::InstanceProfile",
             "Properties" : {
                 "InstanceProfileName" : "flask-instance-profile",
                 "Roles" : [
-                    { "Ref" : "ecs_instance_role" }
+                    { "Ref" : "ECSInstanceRole" }
                 ]
             }
         },
-        "asg" : {
+        "ASG" : {
             "Type" : "AWS::AutoScaling::AutoScalingGroup",
             "Properties" : {
                 "AutoScalingGroupName" : "flask-webapp-asg",
                 "MinSize" : 1,
                 "MaxSize" : 2,
-                "LaunchConfigurationName" : { "Ref" : "lc" },
+                "LaunchConfigurationName" : { "Ref" : "LC" },
                 "VPCZoneIdentifier" : [
-                    { "Ref" : "priv_subnet_a" },
-                    { "Ref" : "priv_subnet_b" }
+                    { "Ref" : "PrivSubnetA" },
+                    { "Ref" : "PrivSubnetB" }
                 ],
                 "Tags" : [
                     { "Key" : "Name", "Value" : "flask-webapp-asg", "PropagateAtLaunch" : true }
                 ]
             }
         },
-        "lc" : {
+        "LC" : {
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
                 "LaunchConfigurationName" : "flask-webapp-lc",
                 "ImageId" : "ami-0650e7d86452db33b",
                 "InstanceType" : "t2.medium",
                 "KeyName" : "sallai-key",
-                "IamInstanceProfile" : { "Ref" : "flask_instance_profile" },
+                "IamInstanceProfile" : { "Ref" : "FlaskInstanceProfile" },
                 "SecurityGroups" : [
-                    { "Ref" : "ecs_sg" }
+                    { "Ref" : "ECSSG" }
                 ],
                 "UserData" : {
                     "Fn::Base64" : {
@@ -274,7 +286,7 @@
                                 {
                                     "Fn::Sub": [
                                         "echo ECS_CLUSTER=${ClusterName} >> /etc/ecs/ecs.config",
-                                        { "ClusterName": { "Ref" : "cluster" } }
+                                        { "ClusterName": { "Ref" : "Cluster" } }
                                     ]
                                 },
                                 "sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm"
@@ -284,42 +296,42 @@
                 }
             }
         },
-        "bucket" : {
+        "Bucket" : {
             "Type" : "AWS::S3::Bucket",
             "Properties" : {
                 "BucketName" : "flask-demo-bucket"
             }
         },
-        "ecr_repo" : {
+        "ECRRepo" : {
             "Type" : "AWS::ECR::Repository",
             "Properties" : {
                 "RepositoryName" : "flask-webapp-test-repo"
             }
         },
-        "cluster" : {
+        "Cluster" : {
             "Type" : "AWS::ECS::Cluster",
             "Properties" : {
                 "ClusterName" : "flask-webapp-cluster"
             }
         },
-        "service" : {
+        "Service" : {
             "Type" : "AWS::ECS::Service",
             "Properties" : {
                 "ServiceName" : "flask-webapp-service",
-                "Cluster" : { "Ref" : "cluster" },
-                "TaskDefinition" : { "Ref" : "flask_webapp_task_def" },
+                "Cluster" : { "Ref" : "Cluster" },
+                "TaskDefinition" : { "Ref" : "FlaskWebappTaskDef" },
                 "DesiredCount" : 3,
-                "Role" : { "Ref" : "ecs_service_role" },
+                "Role" : { "Ref" : "ECSServiceRole" },
                 "LoadBalancer" : [
                     {
-                        "TargetGroupArn" : { "Ref" : "lb_tg" },
+                        "TargetGroupArn" : { "Ref" : "LBTG" },
                         "ContainerPort" : 5000,
                         "ContainerName" : "flask-webapp"
                     }
                 ]
             }
         },
-        "flask_webapp_task_def" : {
+        "FlaskWebappTaskDef" : {
             "Type" : "AWS::ECS::TaskDefinition",
             "Properties" : {
                 "Family" : "flask-webapp",
@@ -340,51 +352,53 @@
                 ]
             }
         },
-        "flask_webapp_load_balancer" : {
+        "FlaskWebappLoadBalancer" : {
             "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
             "Properties" : {
                 "Name" : "flask-webapp-load-balancer",
                 "Scheme" : "internet-facing",
                 "Type" : "application",
                 "SecurityGroups" : [
-                    { "Ref" : "lb_sg" }
+                    { "Ref" : "LBSG" }
                 ],
                 "Subnets" : [
-                    { "Ref" : "priv_subnet_a" },
-                    { "Ref" : "priv_subnet_b" }
+                    { "Ref" : "PrivSubnetA" },
+                    { "Ref" : "PrivSubnetB" }
                 ]
             },
-            "DependsOn" : "igw"
+            "DependsOn" : "Igw"
         },
-        "lb_sg" : {
+        "LBSG" : {
             "Type" : "AWS::EC2::SecurityGroup",
-            "VpcId" : {"Ref" : "vpc"},
-            "SecurityGroupIngress" : [{
-                "IpProtocol" : "tcp",
-                "FromPort" : 0,
-                "ToPort" : 80,
-                "CidrIp" : "00.0.0.0/0"
-            }]
+            "Properties" : {
+                "VpcId" : {"Ref" : "Vpc"},
+                "SecurityGroupIngress" : [{
+                    "IpProtocol" : "tcp",
+                    "FromPort" : 0,
+                    "ToPort" : 80,
+                    "CidrIp" : "00.0.0.0/0"
+                }]
+            }
         },
-        "lb_tg" : {
+        "LBTG" : {
             "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
             "Properties" : {
                 "Name" : "flask-webapp-tg",
                 "Port" : 80,
                 "Protocol" : "HTTP",
-                "VpcId" : { "Ref" : "vpc" }
+                "VpcId" : { "Ref" : "Vpc" }
             },
-            "DependsOn" : "flask_webapp_load_balancer"
+            "DependsOn" : "FlaskWebappLoadBalancer"
         },
-        "listener" : {
+        "Listener" : {
             "Type" : "AWS::ElasticLoadBalancingV2::Listener",
             "Properties" : {
-                "LoadBalancerArn" : { "Ref" : "flask_webapp_load_balancer" },
+                "LoadBalancerArn" : { "Ref" : "FlaskWebappLoadBalancer" },
                 "Port" : 80,
                 "Protocol" : "HTTP",
                 "DefaultActions" : [
                     {
-                        "TargetGroupArn" : { "Ref" : "lb_tg" },
+                        "TargetGroupArn" : { "Ref" : "LBTG" },
                         "Type" : "forward"
                     }
                 ]
