@@ -1,6 +1,38 @@
 {
     "Parameters" : {
-
+        "MasterUserPassword" : {
+            "Type" : "String",
+            "Default" : "password1234",
+        },
+        "MasterUsername" : {
+            "Type" : "String",
+            "Default" : "flask-webapp-root"
+        },
+        "DBInstanceClass" : {
+            "Type" : "String",
+            "AllowedValues" : [
+                "db.t2.micro",
+                "db.r4.large",
+                "db.m4.large"
+            ],
+            "Default" : "db.t2.micro"
+        },
+        "ContainerImageName" : {
+            "Type" : "String",
+            "Default" : "464255417364.dkr.ecr.eu-central-1.amazonaws.com/sallai-test:0.0.1"
+        },
+        "ContainerPort" : {
+            "Type" : "Number",
+            "Default" : 5000
+        },
+        "AMIId" : {
+            "Type" : "String",
+            "Default" : "ami-0650e7d86452db33b"
+        },
+        "KeyPairName" : {
+            "Type" : "String",
+            "Default" : "sallai-key"
+        }
     },
     "Resources" : {
         "Vpc" : {
@@ -184,11 +216,11 @@
                 "AllocatedStorage" : 5,
                 "StorageType" : "gp2",
                 "Engine" : "mysql",
-                "InstanceClass" : "db.t2.micro",
+                "InstanceClass" : { "Ref" : "DBInstanceClass" },
                 "DBName" : "test-instance",
                 "Name" : "testdb",
-                "MasterUsername" : "",
-                "MasterUserPassword" : "",
+                "MasterUsername" : { "Ref" : "MasterUsername" },
+                "MasterUserPassword" : { "Ref" : "MasterUserPassword" },
                 "DBSubnetGroupName": { "Ref" : "SubnetGroup" },
                 "VPCSecurityGroups": [
                     { "Ref" : "DBSG" }
@@ -269,9 +301,9 @@
             "Type" : "AWS::AutoScaling::LaunchConfiguration",
             "Properties" : {
                 "LaunchConfigurationName" : "flask-webapp-lc",
-                "ImageId" : "ami-0650e7d86452db33b",
+                "ImageId" : { "Ref" : "AMIId" },
                 "InstanceType" : "t2.medium",
-                "KeyName" : "sallai-key",
+                "KeyName" : { "Ref" : "KeyPairName" },
                 "IamInstanceProfile" : { "Ref" : "FlaskInstanceProfile" },
                 "SecurityGroups" : [
                     { "Ref" : "ECSSG" }
@@ -325,7 +357,7 @@
                 "LoadBalancer" : [
                     {
                         "TargetGroupArn" : { "Ref" : "LBTG" },
-                        "ContainerPort" : 5000,
+                        "ContainerPort" : { "Ref" : "ContainerPort" },
                         "ContainerName" : "flask-webapp"
                     }
                 ]
@@ -338,13 +370,13 @@
                 "ContainerDefinitions" : [
                     {
                         "Name" : "flask-webapp",
-                        "Image" : "464255417364.dkr.ecr.eu-central-1.amazonaws.com/sallai-test:0.0.1",
+                        "Image" : { "Ref" : "ContainerImageName" },
                         "Memory" : 512,
                         "Cpu" : 1,
                         "Essential" : true,
                         "PortMappings" : [
                             {
-                                "ContainerPort" : 5000,
+                                "ContainerPort" : { "Ref" : "ContainerPort" },
                                 "HostPort" : 0
                             }
                         ]
