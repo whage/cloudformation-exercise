@@ -6,7 +6,7 @@
         },
         "MasterUsername" : {
             "Type" : "String",
-            "Default" : "flask-webapp-root"
+            "Default" : "flaskwebapproot"
         },
         "DBInstanceClass" : {
             "Type" : "String",
@@ -149,15 +149,6 @@
                 ]
             }
         },
-        "PrivRTDefaultRoute" : {
-            "Type" : "AWS::EC2::Route",
-            "DependsOn" : "Igw",
-            "Properties" : {
-                "RouteTableId" : {"Ref" : "PubRT"},
-                "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId" : {"Ref" : "NGW"}
-            }
-        },
         "RTAPrivA" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
             "Properties" : {
@@ -222,8 +213,8 @@
                 "StorageType" : "gp2",
                 "Engine" : "mysql",
                 "DBInstanceClass" : { "Ref" : "DBInstanceClass" },
-                "DBName" : "test-instance",
-                "Name" : "testdb",
+                "DBInstanceIdentifier" : "test-instance",
+                "DBName" : "testdb",
                 "MasterUsername" : { "Ref" : "MasterUsername" },
                 "MasterUserPassword" : { "Ref" : "MasterUserPassword" },
                 "DBSubnetGroupName": { "Ref" : "SubnetGroup" },
@@ -355,7 +346,7 @@
                 "TaskDefinition" : { "Ref" : "FlaskWebappTaskDef" },
                 "DesiredCount" : 3,
                 "Role" : { "Ref" : "ECSServiceRole" },
-                "LoadBalancer" : [
+                "LoadBalancers" : [
                     {
                         "TargetGroupArn" : { "Ref" : "LBTG" },
                         "ContainerPort" : { "Ref" : "ContainerPort" },
