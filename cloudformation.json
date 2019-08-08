@@ -238,6 +238,7 @@
                         }
                     ]
                 },
+                "ManagedPolicyArns": ["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"],
                 "RoleName" : "flask-ecs-service-role",
                 "Path" : "/",
             }
@@ -353,7 +354,8 @@
                         "ContainerName" : "flask-webapp"
                     }
                 ]
-            }
+            },
+            "DependsOn" : "Listener"
         },
         "FlaskWebappTaskDef" : {
             "Type" : "AWS::ECS::TaskDefinition",
