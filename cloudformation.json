@@ -1,4 +1,9 @@
 {
+    "Outputs" : {
+        "LoadBalancerDNSName": {
+            "Value" : { "Fn::GetAtt" : [ "FlaskWebappLoadBalancer", "DNSName" ] }
+        }
+    },
     "Parameters" : {
         "MasterUserPassword" : {
             "Type" : "String",
